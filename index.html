@@ -1,0 +1,319 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Futuristic City App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      background: url('city_background.png') no-repeat center center fixed;
+      background-size: cover;
+      color: white;
+    }
+    .overlay {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden;
+      transition: opacity 0.3s ease;
+    }
+    .overlay.active { opacity: 1; visibility: visible; }
+    .slide {
+      background: #111; border-radius: 12px;
+      width: 90%; max-width: 600px;
+      padding: 20px;
+      position: relative;
+      box-sizing: border-box;
+      transform: translateY(-20px);
+      transition: transform 0.3s ease;
+    }
+    .overlay.active .slide { transform: translateY(0); }
+    .closeBtn {
+      position: absolute; top: 12px; right: 12px;
+      width: 32px; height: 32px;
+      background: #333; color: #fff;
+      border-radius: 50%; font-size: 18px;
+      line-height: 32px; text-align: center;
+      cursor: pointer;
+    }
+    #trackerControls, #codeControls {
+      display: none; flex-direction: column;
+      align-items: center; gap: 12px; margin-top: 20px;
+    }
+    #scrollButtons {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      max-height: 300px; overflow: auto;
+      background: rgba(0,0,0,0.3);
+      padding: 10px; border-radius: 8px;
+      margin-top: 20px;
+    }
+    .circleBtn {
+      width: 50px; height: 50px; border-radius: 50%;
+      border: 2px solid #fff; background: transparent;
+      color: #fff; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s;
+      position: relative;
+    }
+    .circleBtn:hover {
+      background: rgba(255,255,255,0.1);
+      transform: scale(1.05);
+    }
+    .circleBtn.checked { background: rgba(0,200,0,0.7); }
+    .circleBtn.checked::after {
+      content: '✓'; position: absolute;
+      font-size: 20px; color: #fff;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+    .controls-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    button.primary {
+      padding: 10px 20px; background: #28a745;
+      color: #fff; border-radius: 6px;
+      font-size: 16px; cursor: pointer;
+      border: none;
+      transition: background 0.2s;
+    }
+    button.primary:hover { background: #218838; }
+    button.secondary {
+      padding: 8px 16px; background: #dc3545;
+      color: #fff; border-radius: 6px;
+      font-size: 14px; cursor: pointer;
+      border: none;
+      transition: background 0.2s;
+    }
+    button.secondary:hover { background: #c82333; }
+    #noteModal {
+      position: absolute; top: 50%; left: 50%;
+      width: 80%; max-width: 400px;
+      transform: translate(-50%, -50%);
+      background: #222; padding: 15px;
+      border-radius: 10px; display: none;
+      flex-direction: column; gap: 10px;
+      z-index: 10;
+    }
+    #noteModal textarea {
+      width: 100%; height: 80px; resize: none;
+      padding: 8px; border-radius: 6px; border: none;
+    }
+    #openPwBtn {
+      position: absolute; bottom: 20px; right: 20px;
+      padding: 12px 18px; background: rgba(0,0,0,0.6);
+      color: #fff; border-radius: 8px;
+      font-size: 16px; cursor: pointer;
+    }
+    #backupBox {
+      display: none; flex-direction: column; margin-top: 10px;
+      width: 100%;
+    }
+    #backupText {
+      width: 100%; height: 100px; margin-top: 10px;
+      border-radius: 6px; padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <button id="openPwBtn">Unlock Tracker</button>  <div id="passwordOverlay" class="overlay">
+    <div class="slide">
+      <h2 style="color:#fff; text-align:center;">Enter Password</h2>
+      <input id="passwordInput" type="password" placeholder="Password"
+             style="padding:8px; width:80%; margin:20px auto; display:block; border:none; border-radius:4px;">
+      <div style="text-align:center; margin-top:10px;">
+        <button id="pwSubmit" class="primary">Submit</button>
+      </div>
+    </div>
+  </div>  <div id="trackerOverlay" class="overlay">
+    <div class="slide">
+      <div class="closeBtn" onclick="closeTracker()">×</div>
+      <h2 style="color:#fff; text-align:center;">City Tracker</h2>
+      <div id="trackerControls">
+        <div id="motivation" style="color:#0f0;">God gave imagination, now build the impossible.</div>
+        <div id="dayCount" style="color:#ff0; font-size:18px;">2555 Days</div>
+        <div class="controls-row">
+          <button id="resetBtn" class="secondary">Reset Checks</button>
+          <button id="editBtn" class="secondary">Edit Notes</button>
+          <button id="exportBtn" class="secondary">Export Backup</button>
+          <button id="importBtn" class="secondary">Import Backup</button>
+        </div>
+        <div id="backupBox">
+          <textarea id="backupText"></textarea>
+          <button id="applyImportBtn" class="primary">Apply Import</button>
+        </div>
+        <div id="scrollButtons"></div>
+      </div>
+    </div>
+  </div>  <div id="codeOverlay" class="overlay">
+    <div class="slide">
+      <div class="closeBtn" onclick="closeCode()">×</div>
+      <h2 style="color:#fff; text-align:center;">My First Code</h2>
+      <p style="color:#ffd700; text-align:center; font-size:18px;">Never change psychology</p>
+    </div>
+  </div>  <div id="warnOverlay" class="overlay">
+    <div class="slide">
+      <h3 style="color:#fff; text-align:center;">Are you sure you want to reset all checks?</h3>
+      <div class="controls-row" style="margin-top:20px;">
+        <button id="warnOk" class="primary">OK</button>
+        <button id="warnCancel" class="secondary">Cancel</button>
+      </div>
+    </div>
+  </div>  <div id="noteModal">
+    <div class="controls-row" style="justify-content:space-between;">
+      <span style="color:#fff;">Note for Day <span id="noteDay"></span></span>
+      <div class="closeBtn" onclick="closeNote()">×</div>
+    </div>
+    <textarea id="noteInput"></textarea>
+    <button id="saveNoteBtn" class="primary">Save Note</button>
+  </div>  <script>
+    const openPwBtn = document.getElementById('openPwBtn');
+    const pwOverlay = document.getElementById('passwordOverlay');
+    const trackerOverlay = document.getElementById('trackerOverlay');
+    const codeOverlay = document.getElementById('codeOverlay');
+    const warnOverlay = document.getElementById('warnOverlay');
+    const pwInput = document.getElementById('passwordInput');
+    const pwSubmit = document.getElementById('pwSubmit');
+    const scrollButtons = document.getElementById('scrollButtons');
+    const resetBtn = document.getElementById('resetBtn');
+    const editBtn = document.getElementById('editBtn');
+    const trackerControls = document.getElementById('trackerControls');
+    const noteModal = document.getElementById('noteModal');
+    const noteInput = document.getElementById('noteInput');
+    const noteDaySpan = document.getElementById('noteDay');
+    const saveNoteBtn = document.getElementById('saveNoteBtn');
+    const warnOk = document.getElementById('warnOk');
+    const warnCancel = document.getElementById('warnCancel');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const backupBox = document.getElementById('backupBox');
+    const backupText = document.getElementById('backupText');
+    const applyImportBtn = document.getElementById('applyImportBtn');
+
+    let checks = JSON.parse(localStorage.getItem('checks')) || [];
+    let notes = JSON.parse(localStorage.getItem('notes')) || {};
+    let editMode = false;
+
+    openPwBtn.onclick = () => { pwOverlay.classList.add('active'); };
+
+    pwSubmit.onclick = () => {
+      const pw = pwInput.value;
+      if (pw === '4159') openTracker();
+      else if (pw === '1234') openCode();
+      else alert('Incorrect password');
+    };
+
+    function openTracker() {
+      pwOverlay.classList.remove('active');
+      trackerOverlay.classList.add('active');
+      trackerControls.style.display = 'flex';
+      renderButtons();
+    }
+
+    function closeTracker() {
+      trackerOverlay.classList.remove('active');
+    }
+
+    function openCode() {
+      pwOverlay.classList.remove('active');
+      codeOverlay.classList.add('active');
+    }
+
+    function closeCode() {
+      codeOverlay.classList.remove('active');
+    }
+
+    function renderButtons() {
+      scrollButtons.innerHTML = '';
+      for (let i = 1; i <= 2555; i++) {
+        const btn = document.createElement('div');
+        btn.className = 'circleBtn'; btn.textContent = i;
+        btn.style.background = `hsl(${i % 360},70%,50%)`;
+        if (checks.includes(i)) btn.classList.add('checked');
+        btn.onclick = () => { if (editMode) openNote(i); else toggleCheck(i, btn); };
+        scrollButtons.appendChild(btn);
+      }
+    }
+
+    function toggleCheck(day, btn) {
+      const idx = checks.indexOf(day);
+      if (idx > -1) { checks.splice(idx, 1); btn.classList.remove('checked'); }
+      else { checks.push(day); btn.classList.add('checked'); }
+      localStorage.setItem('checks', JSON.stringify(checks));
+    }
+
+    resetBtn.onclick = () => { warnOverlay.classList.add('active'); };
+    warnOk.onclick = () => {
+      checks = [];
+      localStorage.setItem('checks', JSON.stringify(checks));
+      warnOverlay.classList.remove('active');
+      renderButtons();
+    };
+    warnCancel.onclick = () => { warnOverlay.classList.remove('active'); };
+
+    editBtn.onclick = () => {
+      editMode = !editMode;
+      editBtn.textContent = editMode ? 'Exit Edit' : 'Edit Notes';
+    };
+
+    function openNote(day) {
+      noteDaySpan.textContent = day;
+      noteInput.value = notes[day] || '';
+      noteModal.style.display = 'flex';
+    }
+
+    saveNoteBtn.onclick = () => {
+      notes[noteDaySpan.textContent] = noteInput.value;
+      localStorage.setItem('notes', JSON.stringify(notes));
+      noteModal.style.display = 'none';
+    };
+
+    function closeNote() { noteModal.style.display = 'none'; }
+
+    exportBtn.onclick = () => {
+      const data = { checks: checks, notes: notes };
+      backupText.value = JSON.stringify(data);
+      backupBox.style.display = 'flex';
+    };
+
+    importBtn.onclick = () => {
+      backupText.value = '';
+      backupBox.style.display = 'flex';
+    };
+
+    applyImportBtn.onclick = () => {
+      try {
+        const data = JSON.parse(backupText.value);
+        if (data.checks && data.notes) {
+          checks = data.checks;
+          notes = data.notes;
+          localStorage.setItem('checks', JSON.stringify(checks));
+          localStorage.setItem('notes', JSON.stringify(notes));
+          renderButtons();
+          alert('Data imported successfully!');
+        } else {
+          alert('Invalid backup format.');
+        }
+      } catch (e) {
+        alert('Error: Invalid JSON');
+      }
+    };
+
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+
+    function showDailyReminder() {
+      if (Notification.permission === "granted") {
+        new Notification("Tracker Reminder", {
+          body: "Mark your progress for today!",
+          icon: "https://cdn-icons-png.flaticon.com/512/189/189792.png"
+        });
+      }
+    }
+
+    setTimeout(showDailyReminder, 5000);
+  </script></body>
+</html>
